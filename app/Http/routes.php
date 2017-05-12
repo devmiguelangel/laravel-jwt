@@ -11,8 +11,10 @@
 |
 */
 
-Route::get('/', function () {
-    return view('index');
+Route::group(['middleware' => 'auth'], function () {
+    Route::get('/', function () {
+        return view('index');
+    });
 });
 
 Route::group([ 'prefix' => 'api' ], function () {
@@ -20,3 +22,15 @@ Route::group([ 'prefix' => 'api' ], function () {
 
     Route::post('authenticate', 'AuthenticateController@authenticate');
 });
+
+
+// Authentication routes
+Route::get('auth/login', 'Auth\AuthController@getLogin');
+Route::post('auth/login', [
+    'as'   => 'auth.login',
+    'uses' => 'Auth\AuthController@postLogin',
+]);
+Route::get('auth/logout', [
+    'as'   => 'auth.logout',
+    'uses' => 'Auth\AuthController@getLogout',
+]);
