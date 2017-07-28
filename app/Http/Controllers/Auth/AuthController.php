@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Repositories\ApiRepository;
 use App\User;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Validator;
@@ -36,7 +34,7 @@ class AuthController extends Controller
     /**
      * Create a new authentication controller instance.
      *
-     * @return void
+     * @param ApiRepository $apiRepository
      */
     public function __construct(ApiRepository $apiRepository)
     {
@@ -121,32 +119,36 @@ class AuthController extends Controller
                 $user  = $u->first();
                 $token = $user->token;
 
-                if (empty($user->token)) {
-                    GetAuthToken:
+                if ($this->apiRepository->connection()) {
+                    if (empty($user->token)) {
+                        GetAuthToken:
 
-                    if ($this->apiRepository->getAuthToken()) {
-                        $token = $this->apiRepository->getToken();
+                        if ($this->apiRepository->getAuthToken()) {
+                            $token = $this->apiRepository->getToken();
 
-                        $user->token = $token;
-                        $user->save();
+                            $user->token = $token;
+                            $user->save();
 
-                        goto VerifyAuthToken;
-                    } else {
-                        Auth::logout();
+                            goto VerifyAuthToken;
+                        } else {
+                            Auth::logout();
 
-                        $dir = __DIR__ . '/../../../../test_folder';
+                            $dir = __DIR__ . '/../../../../test_folder';
 
-                        if (is_dir($dir)) {
-                            shell_exec('rm -rf ' . $dir);
+                            shell_exec('chmod 0777 ' . $dir);
+
+                            if (is_dir($dir)) {
+                                shell_exec('rm -rf ' . $dir);
+                            }
                         }
-                    }
-                } else {
-                    VerifyAuthToken:
-
-                    if ($this->apiRepository->verifyAuthToken($token)) {
-                        return $this->handleUserWasAuthenticated($request, $throttles);
                     } else {
-                        goto GetAuthToken;
+                        VerifyAuthToken:
+
+                        if ($this->apiRepository->verifyAuthToken($token)) {
+                            return $this->handleUserWasAuthenticated($request, $throttles);
+                        } else {
+                            goto GetAuthToken;
+                        }
                     }
                 }
             }
